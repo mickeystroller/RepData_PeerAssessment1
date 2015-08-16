@@ -1,78 +1,37 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
-
-We first load necessary libraries for data cleanning, plotting, and date processing. 
-```{r echo = TRUE}
 library(dplyr)
 library(ggplot2)
 library(lubridate)
 unzip("activity.zip")
-```
-
-## Loading and preprocessing the data
-```{r echo = TRUE}
 rawdata <- read.csv("activity.csv")
-summary(rawdata)
-# more preprocessing steps are done later
-```
-
 
 ## What is mean total number of steps taken per day?
-I first group the rawdata by date info, and calculate the total number of steps take per day, ignoring the missing value.
-```{r}
 mean.steps <- group_by(rawdata, date) 
 steps.day = summarise(mean.steps, step.per.day = sum(steps,na.rm = TRUE) )
-```
 
-Below, we plot the hisogram of the total number of steps taken per day.
-```{r}
 ggplot(data=steps.day, aes(x=step.per.day)) + 
     geom_histogram() + 
     ggtitle("Histogram of Total Number of Steps Taken per day") + 
     xlab("Steps") + 
     ylab("Counts")
-```    
-
-Below, we calculate and report the **mean** and **median** total number of steps taken per day.
-```{r}
+    
 mean(steps.day$step.per.day)
 median(steps.day$step.per.day)
-```
 
 ## What is the average daily activity pattern?
-Group the time intervals in different days, using modular calculation.
-```{r}
 rawdata$interval.index <- (rawdata$interval) %% 1440
 daily.pattern <- group_by(rawdata, interval.index) 
 steps.interval = summarise(daily.pattern, step.per.interval = mean(steps,na.rm = TRUE) )
-```
-
-Make the time series plot. 
-
-```{r}
 ggplot(data = steps.interval, aes(interval.index, step.per.interval)) + 
     geom_line() + 
     labs(title="Average daily activity pattern", x = "Interval", y = "Average Steps")
-```
 
-Find the index of the 5-minute interval which contains the maximum number of steps.
-```{r}
-which.max(steps.interval$step.per.interval)
-```
-Result show that the 168-th 5-minute interval containing the maximum number of steps.
+index = which.max(steps.interval$step.per.interval)
 
 ## Imputing missing values
-Calculate the total number of missing values in the dataset.
-```{r}
-sum(is.na(rawdata$steps))
-```
+num.NA <- sum(is.na(rawdata$steps))
 
-Filling in all of the missing values, using the mean for that 5-minute interval, and create a new dataset named **newdata**.
-```{r}
+#filling in all of the missing values, using the mean for that 5-minute interval
+#create a new dataset named newdata 
 newdata <- rawdata
 steps.old <- rawdata$steps
 n <- length(steps.old)
@@ -82,11 +41,7 @@ for(i in 1:n) {
         newdata[i,1] <- filter(steps.interval, interval.index == test)$step.per.interval
     }
 }
-```
 
-Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day.
-
-```{r}
 new.mean.steps <- group_by(newdata, date) 
 new.steps.day = summarise(new.mean.steps, step.per.day = sum(steps,na.rm = TRUE) )
 
@@ -98,15 +53,7 @@ ggplot(data=new.steps.day, aes(x=step.per.day)) +
 
 mean(new.steps.day$step.per.day)
 median(new.steps.day$step.per.day)
-```
 
-Obviously, we can see both the mean and medium value increase. 
-
-## Are there differences in activity patterns between weekdays and weekends?
-
-Create a new factor variable in the dataset with two levels -- "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
-
-```{r}
 ## differences in activity patterns between weekdays and weekends
 Sys.setlocale("LC_ALL", 'en_US.UTF-8')
 tmp <- weekdays(ymd(rawdata$date))
@@ -132,13 +79,8 @@ weekday.steps.interval$week.status <- factor(rep("weekday", times = dim(weekday.
 weekend.steps.interval$week.status <- factor(rep("weekend", times = dim(weekend.steps.interval)[1]))
 
 output <- rbind(weekday.steps.interval,weekend.steps.interval)
-```
 
-Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
-
-```{r}
 ggplot(output, aes(interval.index, step.per.interval) ) +
     facet_wrap(~ week.status, nrow = 2, ncol = 1) +
     geom_line() +
     labs(title="Daily Activity Pattern in weekend and weekday", x = "Interval", y = "Number of steps")
-```
